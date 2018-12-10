@@ -1,1 +1,2 @@
+yum -y install python-devel
 yum -y install freetds-devel.x86_64

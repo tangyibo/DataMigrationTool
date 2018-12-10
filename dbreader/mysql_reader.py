@@ -1,7 +1,8 @@
 # -*- coding: UTF-8 -*-
 from base_reader import ReaderBase
 import pymysql
-
+from warnings import filterwarnings
+filterwarnings("error",category=pymysql.Warning)
 
 class ReaderMysql(ReaderBase):
 
@@ -19,9 +20,11 @@ class ReaderMysql(ReaderBase):
             passwd=self.password,
             charset='utf8')
 
+    # 关闭与MySQL的连接
     def close(self):
         self._connection.close()
 
+    # 查询表内所有的数据
     def find_all(self, cursor, sql):
 
         try:
@@ -29,14 +32,16 @@ class ReaderMysql(ReaderBase):
         except pymysql.OperationalError, e:
             self.connect()
             cursor = self._connection.cursor()
-            cursor.execute(sql)
+            return self.find_all(cursor,sql)
+        except pymysql.Warning as e:
+            pass
         except Exception, e:
             return False, e.message
 
         return True, cursor
 
     # 获取mysql的建表语句, 原理：利用MySQL的 show create table 语句获取
-    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None):
+    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None, create_if_not_exist=False):
         mysql_cursor = self._connection.cursor()
         show_create_table_sql = "show create table %s " % curr_table_name
         try:
@@ -55,6 +60,9 @@ class ReaderMysql(ReaderBase):
             create_table_sql = results[1].replace(curr_table_name, new_table_name)
 
         mysql_cursor.close()
+
+        if create_if_not_exist:
+            create_table_sql=create_table_sql.replace('CREATE TABLE','CREATE TABLE IF NOT EXISTS ')
 
         column_names = []
         columns = self.__query_table_columns(curr_table_name)

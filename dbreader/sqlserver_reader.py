@@ -147,9 +147,11 @@ class ReaderSqlserver(ReaderBase):
                   'user': self.username, 'password': self.password, }
         self._connection = pymssql.connect(timeout=90, **params)
 
+    # 关闭与SQLServer的连接
     def close(self):
         pass
 
+    # 查询表内所有的数据
     def find_all(self, cursor, sql):
 
         try:
@@ -164,7 +166,7 @@ class ReaderSqlserver(ReaderBase):
         return True, cursor
 
     # 获取SQLServer的建表语句,原理：利用SQLServer的三个SQL获取表的列、主键、索引信息，然后生成MySQL的建表语句
-    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None):
+    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None, create_if_not_exist=False):
 
         try:
             # 获取列信息
@@ -216,8 +218,13 @@ class ReaderSqlserver(ReaderBase):
             unique = 'UNIQUE' if 'unique' in index[1].lower() else ''
             cols.append('%s KEY `%s` (%s)' % (unique, index[0][:64], re.sub("\([+-]+\)", "", index[2])))
 
-        create_table_sql = 'CREATE TABLE `%s` (\n%s) ENGINE=InnoDB DEFAULT CHARSET=utf8' % (
-        table_name, ',\n'.join(cols))
+        if create_if_not_exist:
+            create_table_sql = 'CREATE TABLE IF NOT EXISTS `%s` (\n%s) ENGINE=InnoDB DEFAULT CHARSET=utf8' % (
+                table_name, ',\n'.join(cols))
+        else:
+            create_table_sql = 'CREATE TABLE `%s` (\n%s) ENGINE=InnoDB DEFAULT CHARSET=utf8' % (
+                table_name, ',\n'.join(cols))
+
         return True, create_table_sql, columns_names
 
     # 获取表的列信息

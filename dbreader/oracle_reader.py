@@ -14,9 +14,11 @@ class ReaderOracle(ReaderBase):
         tns = cx_Oracle.makedsn(self.host, self.port, self.dbname)
         self._connection = cx_Oracle.connect(self.username, self.username, tns)
 
+    # 关闭与Oracle的连接
     def close(self):
         self._connection.close()
 
+    # 查询表内所有的数据
     def find_all(self, cursor, sql):
 
         try:
@@ -31,7 +33,7 @@ class ReaderOracle(ReaderBase):
         return True, cursor
 
     # 获取oracle的建表语句,原理：利用Oracle的 SELECT * FROM table where rownum<1 语句获取列名信息
-    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None):
+    def get_mysql_create_table_sql(self, curr_table_name, new_table_name=None, create_if_not_exist=False):
         oracle_cursor = self._connection.cursor()
 
         sql = "SELECT * FROM %s where rownum<1" % curr_table_name
@@ -72,7 +74,12 @@ class ReaderOracle(ReaderBase):
         table_name = curr_table_name
         if new_table_name is not None:
             table_name = new_table_name
-        create_table_sql = "CREATE TABLE %s (\n" % (table_name,)
+
+        if create_if_not_exist:
+            create_table_sql = "CREATE TABLE IF NOT EXISTS `%s` (\n" % (table_name,)
+        else:
+            create_table_sql = "CREATE TABLE `%s` (\n" % (table_name,)
+
         column_definitions = []
 
         for column in table_metadata:
@@ -95,8 +102,8 @@ class ReaderOracle(ReaderBase):
                 column_type = "TIMESTAMP"
             elif column['type'] == cx_Oracle.FIXED_CHAR:
                 column_type = "CHAR(%s)" % (column['internal_size'],)
-            else: # cx_Oracle.CLOB or cx_Oracle.BLOB
-                raise Exception("No mapping for column type %s" % (column['type'],))
+            else:  # cx_Oracle.CLOB or cx_Oracle.BLOB
+                column_type = "TEXT"
 
             if column['nullable'] == 1:
                 nullable = "null"

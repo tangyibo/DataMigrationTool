@@ -16,9 +16,11 @@ class ReaderBase(object):
     def connect(self):
         pass
 
+    # 关闭与数据库的连接
     def close(self):
         pass
 
+    # 查询表内所有的数据
     def find_all(self, cursor, sql):
         pass
 

@@ -19,9 +19,14 @@ class WriterBase(object):
     def close(self):
         pass
 
-    def data_insert(self, table_name, row):
-        if not isinstance(row, dict):
-            raise Exception('Invalid param')
+    def drop_table(self, table_name):
+        pass
+
+    def create_table(self, create_table_sql):
+        pass
+
+    def insert_value(self, insert_sql, row):
+        pass
 
     # 装饰器 host
     @property

@@ -2,4 +2,4 @@ setuptools
 cx_Oracle
 pymysql
 Cython
-pymssql==2.1.0
+pymssql

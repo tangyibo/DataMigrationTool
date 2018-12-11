@@ -4,7 +4,7 @@
 # Author: tang
 #
 import sys, os
-import datetime
+import datetime,time
 from logger_file import *
 from config_file import ConfigFile
 from dbwriter import *
@@ -27,7 +27,7 @@ class DataMigration:
         if not dbmapper.has_key(self.config.source_db_type):
             raise Exception("Unsupport database type :%s" % self.config.source_db_type)
 
-        logger.info("server param: source db type=%s" % self.config.source_db_type)
+        logger.info("server param: source database type is %s" % self.config.source_db_type)
         dbclass = dbmapper.get(self.config.source_db_type)
         self.db_reader = dbclass(
             host=self.config.source_db_host,
@@ -96,17 +96,22 @@ class DataMigration:
             logger.error("query all sql faild: %s" % reader_cursor)
             return False
 
-        insert_sql=self.db_writer.prepare_insert(table_name,column_names)
-        while True:
-            table_row = reader_cursor.fetchone()
-            if table_row is None:
-                break
+        insert_sql = self.db_writer.prepare_insert(table_name, column_names)
+        success_insert_count=0
+        table_row = reader_cursor.fetchone()
+        while table_row is not None:
+            ret, error = self.db_writer.insert_value(insert_sql, table_row)
+            if ret is False:
+                logger.error("insert data sql faild,error %s" % error)
             else:
-                ret, error = self.db_writer.insert_value(insert_sql, table_row)
-                if ret is False:
-                    logger.error("insert data sql faild,error %s" % error)
+                success_insert_count = success_insert_count + 1
+            if success_insert_count % 1000 is 0:
+                logger.info("read table [%s] data count: %d,and insert data count: %d" % (
+                    src_table,reader_cursor.rowcount, success_insert_count))
+            table_row = reader_cursor.fetchone()
 
-        logger.info("query table [%s] data total count : %d " % (src_table, reader_cursor.rowcount))
+        logger.info("query table [%s] data total count : %d,success insert %d " % (
+        src_table, reader_cursor.rowcount, success_insert_count))
         ret, error = self.db_writer.commit_operation()
         if ret is False:
             logger.error("insert data sql faild,error %s" % error)

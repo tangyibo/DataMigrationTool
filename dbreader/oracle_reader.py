@@ -1,6 +1,9 @@
 # -*- coding: UTF-8 -*-
 from base_reader import ReaderBase
 import cx_Oracle
+import os
+
+os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 
 
 class ReaderOracle(ReaderBase):
@@ -12,7 +15,7 @@ class ReaderOracle(ReaderBase):
     # 建立与oracle数据库的连接
     def connect(self):
         tns = cx_Oracle.makedsn(self.host, self.port, self.dbname)
-        self._connection = cx_Oracle.connect(self.username, self.username, tns)
+        self._connection = cx_Oracle.connect(self.username, self.username, tns,encoding = "UTF-8", nencoding = "UTF-8")
 
     # 关闭与Oracle的连接
     def close(self):
@@ -126,7 +129,7 @@ class ReaderOracle(ReaderBase):
 
         sql = "SELECT COLUMN_NAME FROM user_cons_columns WHERE	constraint_name = \
         (SELECT constraint_name FROM user_constraints WHERE table_name = '%s' AND \
-        constraint_type = 'P') " % table_name
+        constraint_type = 'P') " % table_name.upper()
         try:
             oracle_cursor.execute(sql)
         except cx_Oracle.OperationalError, e:

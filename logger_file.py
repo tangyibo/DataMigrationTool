@@ -13,7 +13,7 @@ prog_name = os.path.basename(sys.argv[0])
 name, suffix = os.path.splitext(prog_name)
 try:
     os.mkdir("%s/log" % real_dir)
-except WindowsError,e:
+except Exception ,e:
     pass
 
 logfilename = "%s/log/log-%s.log" % (real_dir, name)

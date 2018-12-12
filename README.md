@@ -53,10 +53,7 @@ dbname=tangyb
 tbname=tb_class,tb_course_domain,tb_room
 ```
 3、启动运行
-```buildoutcfg
+```
 python ./data_migration.py
 ```
-
-
-最后更新:2018-12-04
 

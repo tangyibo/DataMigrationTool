@@ -6,6 +6,45 @@ from warnings import filterwarnings
 filterwarnings("error", category=pymysql.Warning)
 
 
+class Callback:
+    def __init__(self, instance, function_name):
+        self.__instance = instance
+        self.__function_name = function_name
+
+    def action(self, param, data):
+        return self.__instance.__getattribute__(self.__function_name)(param, data)
+
+
+class TableOperator:
+    def __init__(self, opt_sql, cb, max_cache_size=10000):
+        self.buffer_list = []
+        self.opt_sql = opt_sql
+        self.callback = cb
+        self.max_cache_size = max_cache_size
+
+    def append(self, row):
+        column_values = []
+        for column_value in row:
+            if column_value is None:
+                column_values.append(None)
+            else:
+                column_values.append(pymysql.escape_string(str(column_value)))
+
+        self.buffer_list.append(column_values)
+        if len(self.buffer_list) >= int(self.max_cache_size):
+            ret, error = self.callback.action(param=self.opt_sql, data=self.buffer_list)
+            self.buffer_list = []
+            return ret, error
+
+        return True, 'ok'
+
+    def commit(self):
+        if len(self.buffer_list) > 0:
+            ret, error = self.callback.action(self.opt_sql, self.buffer_list)
+            self.buffer_list = []
+            return ret, error
+
+
 class WriterMysql(WriterBase):
 
     def __init__(self, host, port, dbname, username, password):
@@ -73,40 +112,22 @@ class WriterMysql(WriterBase):
 
         return True, 'ok'
 
-    def prepare_insert(self, table_name, column_names):
+    def prepare_table_operator(self, table_name, column_names):
         question_marks = ",".join(["%s" for i in range(len(column_names))])
         sql_insert = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, ",".join(column_names), question_marks)
-        return sql_insert
+        cb = Callback(self, self.insert_value.__name__)
+        return TableOperator(sql_insert, cb)
 
-    def insert_value(self, insert_sql, row):
-        column_values = []
-        for column_value in row:
-            if column_value is None:
-                column_values.append(None)
-            else:
-                column_values.append(pymysql.escape_string(str(column_value)))
-
+    def insert_value(self, insert_sql, rows):
         mysql_cursor = self._connection.cursor()
         try:
-            mysql_cursor.execute(insert_sql, column_values)
-            return True, 'ok'
-        except pymysql.OperationalError, e:
-            self.connect()
-            return self.insert_value(insert_sql, row)
-        except Exception, e:
-            return False, e.message
-
-        return False, 'error'
-
-    def commit_operation(self):
-        try:
+            mysql_cursor.executemany(insert_sql, rows)
             self._connection.commit()
             return True, 'ok'
         except pymysql.OperationalError, e:
             self.connect()
-            return self.commit_operation()
+            return self.insert_value(insert_sql, rows)
         except Exception, e:
             return False, e.message
 
         return False, 'error'
-

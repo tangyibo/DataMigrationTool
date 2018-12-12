@@ -96,11 +96,11 @@ class DataMigration:
             logger.error("query all sql faild: %s" % reader_cursor)
             return False
 
-        insert_sql = self.db_writer.prepare_insert(table_name, column_names)
+        table_operator = self.db_writer.prepare_table_operator(table_name, column_names)
         success_insert_count=0
         table_row = reader_cursor.fetchone()
         while table_row is not None:
-            ret, error = self.db_writer.insert_value(insert_sql, table_row)
+            ret, error = table_operator.append(table_row)
             if ret is False:
                 logger.error("insert data sql faild,error %s" % error)
             else:
@@ -110,11 +110,12 @@ class DataMigration:
                     src_table,reader_cursor.rowcount, success_insert_count))
             table_row = reader_cursor.fetchone()
 
-        logger.info("query table [%s] data total count : %d,success insert %d " % (
-        src_table, reader_cursor.rowcount, success_insert_count))
-        ret, error = self.db_writer.commit_operation()
+        ret, error = table_operator.commit()
         if ret is False:
             logger.error("insert data sql faild,error %s" % error)
+
+        logger.info("query table [%s] data total count : %d,success insert %d " % (
+        src_table, reader_cursor.rowcount, success_insert_count))
 
         reader_cursor.close()
 

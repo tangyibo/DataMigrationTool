@@ -25,7 +25,7 @@ class WriterBase(object):
     def create_table(self, create_table_sql):
         pass
 
-    def insert_value(self, insert_sql, row):
+    def insert_value(self, insert_sql, rows):
         pass
 
     # 装饰器 host

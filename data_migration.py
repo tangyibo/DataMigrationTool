@@ -53,7 +53,7 @@ class DataMigration:
         logger.info("running data migration ...")
         for src_table in self.config.mysql_table_map:
             starttime = datetime.datetime.now()
-            ret=self.__handle_one_table(src_table, self.config.mysql_table_map[src_table], True, True)
+            ret=self.__handle_one_table(src_table, self.config.mysql_table_map[src_table], True, False)
             endtime = datetime.datetime.now()
             logger.info("migration table [%s] elipse %d(s)..." % (src_table, (endtime - starttime).seconds))
             success=success and ret
@@ -75,11 +75,13 @@ class DataMigration:
             logger.info("get create sql from source database failed,table:%s, error:%s" % (src_table, create_table_sql))
             return False
 
+        logger.info("get create sql from source database is :\n%s " % create_table_sql)
+
         table_name = src_table
         if dest_table is not None:
             table_name = dest_table
 
-        if drop_if_exists:
+        if drop_if_exists is True:
             self.db_writer.drop_table(table_name)
 
         ret, error = self.db_writer.create_table(create_table_sql)
@@ -96,7 +98,8 @@ class DataMigration:
             logger.error("query all sql faild: %s" % reader_cursor)
             return False
 
-        table_operator = self.db_writer.prepare_table_operator(table_name, column_names)
+        table_operator = self.db_writer.prepare_table_operator(table_name, column_names,drop_if_exists)
+        logger.info("insert sql: %s" % table_operator.statement)
         success_insert_count=0
         table_row = reader_cursor.fetchone()
         while table_row is not None:
@@ -145,10 +148,10 @@ if __name__ == '__main__':
 
     # shell 调用方法:
     #
-    # python hello.py
+    # python data_migration.py
     #
     # if [ $?==0 ];then
-    #     exit
+    #     echo 'success'
     # else
-    #     python world.py
+    #     echo 'error'
     # fi

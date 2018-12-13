@@ -117,8 +117,9 @@ class ReaderOracle(ReaderBase):
 
         create_table_sql += ",\n".join(column_definitions)
 
-        if primary_key_column:
-            create_table_sql += ',\nPRIMARY KEY (`%s`)' % primary_key_column
+        if len(primary_key_column) > 0:
+            primary_key_column_fields = ",".join(["`%s`" % i for i in primary_key_column])
+            create_table_sql += ',\nPRIMARY KEY (%s)' % primary_key_column_fields
         create_table_sql += "\n)ENGINE=InnoDB DEFAULT CHARACTER SET = utf8;"
 
         return True, create_table_sql, columns_names
@@ -141,4 +142,10 @@ class ReaderOracle(ReaderBase):
 
         r = oracle_cursor.fetchall()
         oracle_cursor.close()
-        return r[0][0] if r else None
+
+        ret = []
+        if r:
+            for item in r:
+                ret.append(item[0])
+
+        return ret

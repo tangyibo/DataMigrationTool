@@ -197,22 +197,16 @@ class ReaderSqlserver(ReaderBase):
         auto_increment_column = None
         for col in columns:
             columns_names.append(col[ColumnDesc.COLUMN_NAME])
-            cols.append("`%s` %s %s%s%s" % (col[ColumnDesc.COLUMN_NAME],
+            cols.append("`%s` %s %s%s" % (col[ColumnDesc.COLUMN_NAME],
                                             get_column_type(col),
-                                            " AUTO_INCREMENT" if col[ColumnDesc.IS_IDENTITY] else '',
                                             convert_column_default(col),
                                             " NOT NULL" if col[ColumnDesc.IS_NULLABLE] == 'NO' else ''))
             auto_increment_column = col[ColumnDesc.COLUMN_NAME] if col[
                 ColumnDesc.IS_IDENTITY] else auto_increment_column
 
         if primary_key_column:
-            cols.append('PRIMARY KEY (`%s`)' % primary_key_column)
-            if auto_increment_column and \
-                    not filter(lambda x: auto_increment_column.upper() in x[2].upper(), indexes):
-                indexes.append(('ix_unique_%s' % auto_increment_column,
-                                'unique', auto_increment_column))
-        elif auto_increment_column:
-            cols.append('PRIMARY KEY (`%s`)' % auto_increment_column)
+            primary_key_column_fields = ",".join(["`%s`" % i for i in primary_key_column])
+            cols.append('PRIMARY KEY (%s)' % primary_key_column_fields)
 
         for index in indexes:
             unique = 'UNIQUE' if 'unique' in index[1].lower() else ''
@@ -281,7 +275,13 @@ class ReaderSqlserver(ReaderBase):
 
         r = cursor.fetchall()
         cursor.close()
-        return r[0][0] if r else None
+
+        ret = []
+        if r:
+            for item in r:
+                ret.append(item[0])
+
+        return ret
 
     # 获取表的索引信息
     def __query_table_indexes(self, table_name):

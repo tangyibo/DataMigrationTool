@@ -1,10 +1,10 @@
 # -*- coding: UTF-8 -*-
 from base_writer import WriterBase
 import pymysql
-from warnings import filterwarnings
+import warnings
 
-filterwarnings("error", category=pymysql.Warning)
-
+warnings.filterwarnings("error", category=pymysql.Warning)
+warnings.filterwarnings("ignore")
 
 class Callback:
     def __init__(self, instance, function_name):
@@ -22,11 +22,19 @@ class TableOperator:
         self.callback = cb
         self.max_cache_size = max_cache_size
 
+    @property
+    def statement(self):
+        return self.opt_sql
+
     def append(self, row):
         column_values = []
         for column_value in row:
             if column_value is None:
                 column_values.append(None)
+            elif column_value is True:
+                column_values.append('1')
+            elif column_value is False:
+                column_values.append('0')
             else:
                 column_values.append(pymysql.escape_string(str(column_value)))
 
@@ -99,6 +107,8 @@ class WriterMysql(WriterBase):
         try:
             cursor.execute(create_table_sql)
             self._connection.commit()
+        except pymysql.err.Warning,e:
+            return True,e.message
         except pymysql.OperationalError, e:
             self.connect()
             cursor = self._connection.cursor()
@@ -112,14 +122,21 @@ class WriterMysql(WriterBase):
 
         return True, 'ok'
 
-    def prepare_table_operator(self, table_name, column_names):
+    def prepare_table_operator(self, table_name, column_names, drop_if_exists):
         question_marks = ",".join(["%s" for i in range(len(column_names))])
-        sql_insert = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, ",".join(column_names), question_marks)
+        on_duplicate_key_update = ",".join([" %s=VALUES(%s) " % (name, name) for name in column_names])
+        if drop_if_exists is True:
+            sql_insert = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, ",".join(column_names), question_marks)
+        else:
+            sql_insert = "INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s " % \
+                         (table_name, ",".join(column_names), question_marks, on_duplicate_key_update)
+
         cb = Callback(self, self.insert_value.__name__)
         return TableOperator(sql_insert, cb)
 
     def insert_value(self, insert_sql, rows):
         mysql_cursor = self._connection.cursor()
+
         try:
             mysql_cursor.executemany(insert_sql, rows)
             self._connection.commit()

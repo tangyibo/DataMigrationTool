@@ -61,8 +61,11 @@ class ReaderMysql(ReaderBase):
 
         mysql_cursor.close()
 
-        if create_if_not_exist:
+        if create_if_not_exist is True:
             create_table_sql=create_table_sql.replace('CREATE TABLE','CREATE TABLE IF NOT EXISTS ')
+
+        # remove the current time field
+        create_table_sql=create_table_sql.replace('ON UPDATE CURRENT_TIMESTAMP',' ')
 
         column_names = []
         columns = self.__query_table_columns(curr_table_name)

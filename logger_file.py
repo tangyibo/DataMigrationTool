@@ -5,7 +5,7 @@ import ConfigParser
 import logging
 import logging.handlers
 
-__all__=["logger"]
+__all__ = ["logger"]
 
 # 加载日志配置
 real_dir = os.path.dirname(os.path.realpath(__file__))
@@ -13,7 +13,7 @@ prog_name = os.path.basename(sys.argv[0])
 name, suffix = os.path.splitext(prog_name)
 try:
     os.mkdir("%s/log" % real_dir)
-except Exception ,e:
+except Exception, e:
     pass
 
 logfilename = "%s/log/log-%s.log" % (real_dir, name)

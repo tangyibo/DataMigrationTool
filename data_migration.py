@@ -10,11 +10,13 @@ from config_file import ConfigFile
 from dbwriter import *
 from dbreader import *
 
-
 ################
 # 数据迁移工具类 #
 ################
 class DataMigration:
+
+    magic_field_name = 'magic_time'
+
     # 构造函数
     def __init__(self, filename):
         self.config = ConfigFile(filename)
@@ -28,20 +30,23 @@ class DataMigration:
             raise Exception("Unsupport database type :%s" % self.config.source_db_type)
 
         logger.info("server param: source database type is %s" % self.config.source_db_type)
+
         dbclass = dbmapper.get(self.config.source_db_type)
         self.db_reader = dbclass(
             host=self.config.source_db_host,
             port=self.config.source_db_port,
             dbname=self.config.source_db_dbname,
             username=self.config.source_db_user,
-            password=self.config.source_db_passwd
+            password=self.config.source_db_passwd,
+            magic_field_name=DataMigration.magic_field_name
         )
         self.db_writer = WriterMysql(
             host=self.config.destination_mysql_host,
             port=self.config.destination_mysql_port,
             dbname=self.config.destination_mysql_dbname,
             username=self.config.destination_mysql_user,
-            password=self.config.destination_mysql_passwd
+            password=self.config.destination_mysql_passwd,
+            magic_field_name=DataMigration.magic_field_name
         )
 
         self.db_reader.connect()
@@ -53,10 +58,11 @@ class DataMigration:
         logger.info("running data migration ...")
         for src_table in self.config.mysql_table_map:
             starttime = datetime.datetime.now()
-            ret=self.__handle_one_table(src_table, self.config.mysql_table_map[src_table], True, False)
+            dest_table = self.config.mysql_table_map[src_table]
+            ret = self.__handle_one_table(src_table, dest_table, True, False)
             endtime = datetime.datetime.now()
-            logger.info("migration table [%s] elipse %d(s)..." % (src_table, (endtime - starttime).seconds))
-            success=success and ret
+            logger.info("migration table [%s=>%s] elipse %d(s)" % (src_table, dest_table, (endtime - starttime).seconds))
+            success = success and ret
 
         return success
 
@@ -90,7 +96,7 @@ class DataMigration:
             return False
 
         reader_cursor = self.db_reader.connection.cursor()
-        query_field_string = ",".join(["%s" % column_names[i] for i in range(len(column_names))])
+        query_field_string = ",".join(["%s" % name for name in column_names])
         query_all_data_sql = "select %s from %s " % (query_field_string, src_table)
         logger.info("query all sql: %s" % query_all_data_sql)
         ret, reader_cursor = self.db_reader.find_all(reader_cursor, query_all_data_sql)
@@ -98,9 +104,9 @@ class DataMigration:
             logger.error("query all sql faild: %s" % reader_cursor)
             return False
 
-        table_operator = self.db_writer.prepare_table_operator(table_name, column_names,drop_if_exists)
+        table_operator, current_time = self.db_writer.prepare_table_operator(table_name, column_names, drop_if_exists)
         logger.info("insert sql: %s" % table_operator.statement)
-        success_insert_count=0
+        success_insert_count = 0
         table_row = reader_cursor.fetchone()
         while table_row is not None:
             ret, error = table_operator.append(table_row)
@@ -115,10 +121,16 @@ class DataMigration:
 
         ret, error = table_operator.commit()
         if ret is False:
-            logger.error("insert data sql faild,error %s" % error)
+            logger.error("insert data sql failed,error %s" % error)
 
         logger.info("query table [%s] data total count : %d,success insert %d " % (
-        src_table, reader_cursor.rowcount, success_insert_count))
+            src_table, reader_cursor.rowcount, success_insert_count))
+
+        delete_sql = "delete from %s where %s<'%s' " % (table_name, DataMigration.magic_field_name, current_time)
+        logger.info("delete old sql: %s" % delete_sql)
+        ret, error = self.db_writer.delete_value(delete_sql)
+        if ret is False:
+            logger.error("delete data sql failed,error %s" % error)
 
         reader_cursor.close()
 

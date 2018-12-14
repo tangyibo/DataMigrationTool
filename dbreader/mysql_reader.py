@@ -7,8 +7,8 @@ filterwarnings("error",category=pymysql.Warning)
 class ReaderMysql(ReaderBase):
 
     # 构造函数
-    def __init__(self, host, port, dbname, username, password):
-        ReaderBase.__init__(self, host, port, dbname, username, password)
+    def __init__(self, host, port, dbname, username, password,magic_field_name):
+        ReaderBase.__init__(self, host, port, dbname, username, password,magic_field_name)
 
     # 建立与mysql数据库的连接
     def connect(self):
@@ -62,10 +62,16 @@ class ReaderMysql(ReaderBase):
         mysql_cursor.close()
 
         if create_if_not_exist is True:
-            create_table_sql=create_table_sql.replace('CREATE TABLE','CREATE TABLE IF NOT EXISTS ')
+            create_table_sql = create_table_sql.replace('CREATE TABLE', 'CREATE TABLE IF NOT EXISTS ')
 
         # remove the current time field
-        create_table_sql=create_table_sql.replace('ON UPDATE CURRENT_TIMESTAMP',' ')
+        create_table_sql = create_table_sql.replace('ON UPDATE CURRENT_TIMESTAMP', ' ')
+
+        pos = create_table_sql.find('(', 0)
+        first = create_table_sql[0:pos + 1]
+        last = create_table_sql[pos + 1:]
+        create_table_sql = "%s\n %s timestamp NOT NULL DEFAULT '0000-00-00 00:00:00', %s" % (
+            first, self.magic_field_name, last)
 
         column_names = []
         columns = self.__query_table_columns(curr_table_name)

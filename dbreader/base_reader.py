@@ -3,12 +3,14 @@
 class ReaderBase(object):
 
     # 构造函数
-    def __init__(self, host, port, dbname, username, password):
+    def __init__(self, host, port, dbname, username, password,magic_field_name):
         self._host = host
         self._port = port
         self._dbname = dbname
         self._username = username
         self._password = password
+
+        self._magic_field_name=magic_field_name
 
         self._connection = None
 
@@ -57,3 +59,8 @@ class ReaderBase(object):
     @property
     def connection(self):
         return self._connection
+
+    # 装饰器 magic_field_name
+    @property
+    def magic_field_name(self):
+        return self._magic_field_name

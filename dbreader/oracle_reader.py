@@ -9,8 +9,8 @@ os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 class ReaderOracle(ReaderBase):
 
     # 构造函数
-    def __init__(self, host, port, dbname, username, password):
-        ReaderBase.__init__(self, host, port, dbname, username, password)
+    def __init__(self, host, port, dbname, username, password,magic_field_name):
+        ReaderBase.__init__(self, host, port, dbname, username, password,magic_field_name)
 
     # 建立与oracle数据库的连接
     def connect(self):
@@ -114,6 +114,8 @@ class ReaderOracle(ReaderBase):
                 nullable = "not null"
 
             column_definitions.append("%s %s %s" % (column_name, column_type, nullable))
+
+        column_definitions.append("%s timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' " % self.magic_field_name)
 
         create_table_sql += ",\n".join(column_definitions)
 

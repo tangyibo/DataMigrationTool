@@ -55,8 +55,8 @@ class TableOperator:
 
 class WriterMysql(WriterBase):
 
-    def __init__(self, host, port, dbname, username, password):
-        WriterBase.__init__(self, host, port, dbname, username, password)
+    def __init__(self, host, port, dbname, username, password,magic_field_name):
+        WriterBase.__init__(self, host, port, dbname, username, password,magic_field_name)
 
     def connect(self):
         self._connection = pymysql.connect(
@@ -123,16 +123,36 @@ class WriterMysql(WriterBase):
         return True, 'ok'
 
     def prepare_table_operator(self, table_name, column_names, drop_if_exists):
+        key_value_pair = []
+        for name in column_names:
+            key_value_pair.append("%s=VALUES(%s)" % (name, name))
+
+        key_value_pair.append("%s=now()" % self.magic_field_name)
+        on_duplicate_key_update = ",".join([" %s " % i for i in key_value_pair])
         question_marks = ",".join(["%s" for i in range(len(column_names))])
-        on_duplicate_key_update = ",".join([" %s=VALUES(%s) " % (name, name) for name in column_names])
         if drop_if_exists is True:
-            sql_insert = "INSERT INTO %s (%s) VALUES (%s)" % (table_name, ",".join(column_names), question_marks)
+            sql_insert = "INSERT INTO %s (%s) VALUES (%s,%s=now())" % (
+                table_name, ",".join(column_names), question_marks, self.magic_field_name)
         else:
-            sql_insert = "INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s " % \
-                         (table_name, ",".join(column_names), question_marks, on_duplicate_key_update)
+            sql_insert = "INSERT INTO %s (%s,%s) VALUES (%s,now()) ON DUPLICATE KEY UPDATE %s " % \
+                         (table_name, ",".join(column_names), self.magic_field_name, question_marks,
+                          on_duplicate_key_update)
+
+        mysql_cursor = self._connection.cursor()
+        current_time_sql = "SELECT now()"
+        try:
+            mysql_cursor.execute(current_time_sql)
+        except pymysql.OperationalError, e:
+            self.connect()
+            return self.prepare_table_operator(table_name, column_names, drop_if_exists)
+        except Exception, e:
+            raise Exception(e.message)
+
+        r = mysql_cursor.fetchall()
+        mysql_cursor.close()
 
         cb = Callback(self, self.insert_value.__name__)
-        return TableOperator(sql_insert, cb)
+        return TableOperator(sql_insert, cb),r[0][0] if r else None
 
     def insert_value(self, insert_sql, rows):
         mysql_cursor = self._connection.cursor()
@@ -144,6 +164,21 @@ class WriterMysql(WriterBase):
         except pymysql.OperationalError, e:
             self.connect()
             return self.insert_value(insert_sql, rows)
+        except Exception, e:
+            return False, e.message
+
+        return False, 'error'
+
+    def delete_value(self,delete_sql):
+        mysql_cursor = self._connection.cursor()
+
+        try:
+            mysql_cursor.execute(delete_sql)
+            self._connection.commit()
+            return True, 'ok'
+        except pymysql.OperationalError, e:
+            self.connect()
+            return self.delete_value(delete_sql)
         except Exception, e:
             return False, e.message
 

@@ -138,8 +138,8 @@ def convert_column_default(col):
 class ReaderSqlserver(ReaderBase):
 
     # 构造函数
-    def __init__(self, host, port, dbname, username, password):
-        ReaderBase.__init__(self, host, port, dbname, username, password)
+    def __init__(self, host, port, dbname, username, password,magic_field_name):
+        ReaderBase.__init__(self, host, port, dbname, username, password,magic_field_name)
 
     # 建立与SQLServer数据库的连接
     def connect(self):
@@ -203,6 +203,8 @@ class ReaderSqlserver(ReaderBase):
                                             " NOT NULL" if col[ColumnDesc.IS_NULLABLE] == 'NO' else ''))
             auto_increment_column = col[ColumnDesc.COLUMN_NAME] if col[
                 ColumnDesc.IS_IDENTITY] else auto_increment_column
+
+        cols.append("%s timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'" % self.magic_field_name)
 
         if primary_key_column:
             primary_key_column_fields = ",".join(["`%s`" % i for i in primary_key_column])

@@ -34,7 +34,7 @@ MySQL的建表语句，到目的端MySQL执行，并进行数据由源库迁移�
 ;数据库类型,支持的类型包括：oracle,sqlserver,mysql
 type=sqlserver
 ;源端数据库ip地址
-host=127.10.5.63
+host=10.1.1.63
 ;源端数据库端口
 port=1433
 ;源端数据库用户

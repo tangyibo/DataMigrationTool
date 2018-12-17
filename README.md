@@ -1,9 +1,9 @@
-数据迁移工具(Data Migration Tool,DMT)
+数据同步工具(Data Migration Tool,DMT)
 ===================================
 
 一、功能简介
 -----------
-将远程数据库（包括Oracle、SqlServer、MySQL）中的表拉取迁移到本地
+将远程数据库（包括Oracle、SqlServer、MySQL）中的表拉取/同步到本地
 的MySQL数据库中，提供MySQL自动建表与数据导入功能。
 
 二、基础要求

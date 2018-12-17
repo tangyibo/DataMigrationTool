@@ -14,7 +14,7 @@ class ReaderOracle(ReaderBase):
 
     # 建立与oracle数据库的连接
     def connect(self):
-        tns = cx_Oracle.makedsn(self.host, self.port, self.dbname)
+        tns = cx_Oracle.makedsn(self.host, self.port, sid=self.dbname, service_name=self.dbname)
         self._connection = cx_Oracle.connect(self.username, self.username, tns,encoding = "UTF-8", nencoding = "UTF-8")
 
     # 关闭与Oracle的连接

@@ -14,6 +14,21 @@ MySQL的建表语句，到目的端MySQL执行建表；
 - 通过读取源端数据库表中的数据，将其增量推送到目的端库MySQL中；
 - 利用MySQL的binlog机制接收在数据同步过程中的增量数据，以备业务使用。
 
+数据迁移同步部分的逻辑代码如下：
+
+ (1)为要同步的表增加一个专用扩展列T(时间类型)
+ 
+ (2)在迁移同步每张表前，先记录下MySQL的当前时间（用于后面的delete同步）
+ 
+ (3)利用MySQL的insert into ... on duplicate update ...语句，将源表中的数据灌如到目标表中。
+ 
+ (4)利用扩展列T，同步需要删除的数据。
+
+![逻辑图](https://github.com/tangyibo/DataMigrationTool/blob/master/doc/main.png)
+
+说明：假设数据库中的表test有A,B两个字段，其中A为主键，T为本模块补充的时间类型字段。
+
+
 三、MySQL的binlog配置
 -----------------
 在程序启动前，需要配置MySQL的my.cnf 配置文件如下：

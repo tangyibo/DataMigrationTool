@@ -1,5 +1,6 @@
 setuptools
-cx_Oracle
 pymysql
+cx_Oracle
 Cython
 pymssql
+mysql-replication

@@ -1,6 +1,8 @@
 数据迁移工具(Data Migration Tool,DMT)
 ===================================
 
+此工具已经不再维护，新项目请见：https://gitee.com/inrgihc/dbswitch
+
 一、功能简介
 -----------
 - 将远程数据库（包括Oracle、SqlServer、MySQL）中的表拉取迁移到本地
